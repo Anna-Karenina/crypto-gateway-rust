@@ -1,0 +1,45 @@
+syntax = "proto3";
+
+package tron_gateway.common.v1;
+
+// Общие типы для всех сервисов
+
+// Статус транзакции
+enum TransactionStatus {
+  TRANSACTION_STATUS_UNSPECIFIED = 0;
+  TRANSACTION_STATUS_PENDING = 1;
+  TRANSACTION_STATUS_PROCESSING = 2;
+  TRANSACTION_STATUS_COMPLETED = 3;
+  TRANSACTION_STATUS_FAILED = 4;
+  TRANSACTION_STATUS_CANCELLED = 5;
+}
+
+// Ошибка API
+message ApiError {
+  string code = 1;
+  string message = 2;
+  map<string, string> details = 3;
+}
+
+// Метаданные для пагинации
+message PaginationMeta {
+  int32 total_count = 1;
+  int32 page = 2;
+  int32 per_page = 3;
+  int32 total_pages = 4;
+}
+
+// Запрос с пагинацией
+message PaginationRequest {
+  int32 page = 1;
+  int32 per_page = 2;
+}
+
+// Health check
+message HealthCheckRequest {}
+
+message HealthCheckResponse {
+  string status = 1;
+  string version = 2;
+  string timestamp = 3;
+}

@@ -1,0 +1,85 @@
+version: "3.8"
+
+services:
+  # PostgreSQL база данных
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: tron_gateway
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Rust микросервис
+  tron-gateway-rust:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      # Конфигурация сервера
+      APP__SERVER__HOST: "0.0.0.0"
+      APP__SERVER__PORT: "8080"
+      APP__SERVER__CORS_ENABLED: "true"
+
+      # Конфигурация БД
+      APP__DATABASE__URL: "postgresql://postgres:postgres@postgres:5432/tron_gateway"
+      APP__DATABASE__MAX_CONNECTIONS: "10"
+
+      # Конфигурация TRON
+      APP__TRON__BASE_URL: "https://api.trongrid.io"
+      APP__TRON__API_KEY: "${TRONGRID_API_KEY:-}"
+      APP__TRON__USDT_CONTRACT: "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t"
+      APP__TRON__USDT_DECIMALS: "6"
+
+      # Конфигурация кошельков
+      APP__WALLET__ACTIVATION__ENABLED: "true"
+      APP__WALLET__ACTIVATION__AMOUNT: "1.0"
+
+      # Конфигурация комиссий
+      APP__FEES__FALLBACK_TRX_PER_TRANSACTION: "15.0"
+      APP__FEES__TRX_TO_USDT_RATE: "0.10"
+      APP__FEES__COMMISSION_PERCENTAGE: "0.5"
+      APP__FEES__MIN_COMMISSION_USDT: "1.0"
+      APP__FEES__MAX_COMMISSION_USDT: "10.0"
+
+      # Логирование
+      RUST_LOG: "info"
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test:
+        ["CMD", "curl", "-f", "http://localhost:8080/api/debug/system/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Adminer для управления БД (опционально)
+  adminer:
+    image: adminer:4.8.1
+    ports:
+      - "8081:8080"
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres
+    depends_on:
+      - postgres
+
+volumes:
+  postgres_data:
+
+networks:
+  default:
+    name: tron-gateway-network

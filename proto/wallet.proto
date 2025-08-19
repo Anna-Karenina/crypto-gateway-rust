@@ -1,0 +1,87 @@
+syntax = "proto3";
+
+package tron_gateway.wallet.v1;
+
+// Сервис управления кошельками
+service WalletService {
+  // Создание нового кошелька
+  rpc CreateWallet(CreateWalletRequest) returns (WalletResponse);
+  
+  // Получение кошелька по ID
+  rpc GetWallet(GetWalletRequest) returns (WalletResponse);
+  
+  // Получение баланса кошелька
+  rpc GetWalletBalance(GetWalletBalanceRequest) returns (WalletBalanceResponse);
+  
+  // Активация кошелька
+  rpc ActivateWallet(ActivateWalletRequest) returns (ActivateWalletResponse);
+  
+  // Получение транзакций кошелька
+  rpc GetWalletTransactions(GetWalletTransactionsRequest) returns (WalletTransactionsResponse);
+}
+
+// Запрос создания кошелька
+message CreateWalletRequest {
+  optional string owner_id = 1;
+}
+
+// Запрос получения кошелька
+message GetWalletRequest {
+  int64 wallet_id = 1;
+}
+
+// Запрос баланса кошелька
+message GetWalletBalanceRequest {
+  int64 wallet_id = 1;
+}
+
+// Запрос активации кошелька
+message ActivateWalletRequest {
+  string wallet_address = 1;
+}
+
+// Запрос транзакций кошелька
+message GetWalletTransactionsRequest {
+  int64 wallet_id = 1;
+  int32 limit = 2;
+  int32 offset = 3;
+}
+
+// Ответ с кошельком
+message WalletResponse {
+  int64 id = 1;
+  string address = 2;
+  optional string owner_id = 3;
+  string created_at = 4;
+  optional string balance = 5;
+}
+
+// Ответ с балансом кошелька
+message WalletBalanceResponse {
+  int64 wallet_id = 1;
+  string usdt_balance = 2;
+  string trx_balance = 3;
+}
+
+// Ответ активации кошелька
+message ActivateWalletResponse {
+  string address = 1;
+  string activation_status = 2;
+  string message = 3;
+}
+
+// Ответ с транзакциями кошелька
+message WalletTransactionsResponse {
+  int64 wallet_id = 1;
+  repeated Transaction transactions = 2;
+  int32 total_count = 3;
+}
+
+// Транзакция
+message Transaction {
+  int64 id = 1;
+  string tx_hash = 2;
+  string status = 3;
+  string amount = 4;
+  string created_at = 5;
+}

@@ -1,0 +1,8 @@
+# Конфигурация для diesel CLI
+
+[print_schema]
+file = "src/infrastructure/database/schema.rs"
+custom_type_derives = ["diesel::deserialize::Queryable", "diesel::selectable::Selectable"]
+
+[migrations_directory]
+dir = "src/infrastructure/database/migrations"

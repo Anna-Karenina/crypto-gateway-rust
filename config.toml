@@ -1,0 +1,46 @@
+# TRON Gateway Configuration
+# Поддерживает переменные окружения в формате ${ENV_VAR}
+
+[server]
+host = "${API_HOST:0.0.0.0}"
+port = "${API_PORT:8080}"
+cors_enabled = "${CORS_ENABLED:true}"
+
+[grpc]
+enabled = "${GRPC_ENABLED:true}" 
+host = "${GRPC_HOST:0.0.0.0}"
+port = "${GRPC_PORT:50051}"
+
+[database]
+url = "${DATABASE_URL:postgresql://postgres:postgres123@localhost:5432/tron_gateway}"
+max_connections = "${DB_MAX_CONNECTIONS:10}"
+
+[tron]
+api_key = "${TRONGRID_API_KEY}"
+base_url = "${TRONGRID_BASE_URL:https://api.shasta.trongrid.io}"
+usdt_contract = "${TRONGRID_USDT_CONTRACT:TG3XXyExBkPp9nzdajDZsozEu4BkaSJozs}"
+usdt_decimals = "${USDT_DECIMALS:6}"
+master_wallet_address = "${MASTER_WALLET_ADDRESS:TH3QBLNLsimQbNwq2DxTGhoDYeeCZYTvK3}"
+master_wallet_private_key = "${MASTER_WALLET_PRIVATE_KEY:df319c4fe709ad6a9f32b07ada986f4055708f4e064e5ff6cab439561a6eae59}"
+
+[wallet]
+use_real_generator = "${USE_REAL_TRON_GENERATOR:true}"
+
+[wallet.activation]
+enabled = "${WALLET_ACTIVATION_ENABLED:true}"
+amount = "${WALLET_ACTIVATION_AMOUNT:1.0}"
+
+[fees]
+trx_per_transaction = "${FEE_TRX_PER_TRANSACTION:15.0}"
+trx_to_usdt_rate = "${FEE_TRX_TO_USDT_RATE:0.10}"
+commission_percentage = "${FEE_COMMISSION_PERCENTAGE:0.5}"
+min_commission_usdt = "${FEE_MIN_COMMISSION_USDT:1.0}"
+max_commission_usdt = "${FEE_MAX_COMMISSION_USDT:10.0}"
+
+[gas_sponsorship]
+enabled = "${SPONSOR_GAS_ENABLED:true}"
+min_trx_amount = "${SPONSOR_MIN_TRX_AMOUNT:15.0}"
+
+[logging]
+level = "${LOG_LEVEL:info}"
+format = "${LOG_FORMAT:json}"

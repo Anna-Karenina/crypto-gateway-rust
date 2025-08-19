@@ -1,0 +1,100 @@
+syntax = "proto3";
+
+package tron_gateway.transfer.v1;
+
+// Сервис управления трансферами
+service TransferService {
+  // Превью трансфера с расчетом комиссий
+  rpc PreviewTransfer(PreviewTransferRequest) returns (TransferPreviewResponse);
+  
+  // Создание USDT трансфера
+  rpc CreateTransfer(CreateTransferRequest) returns (TransferResponse);
+  
+  // Получение трансфера по ID
+  rpc GetTransfer(GetTransferRequest) returns (TransferResponse);
+  
+  // Получение трансфера по reference_id
+  rpc GetTransferByReference(GetTransferByReferenceRequest) returns (TransferResponse);
+  
+  // Получение трансферов кошелька
+  rpc GetWalletTransfers(GetWalletTransfersRequest) returns (WalletTransfersResponse);
+  
+  // Обработка pending трансферов
+  rpc ProcessPendingTransfers(ProcessPendingTransfersRequest) returns (ProcessPendingTransfersResponse);
+}
+
+// Запрос превью трансфера
+message PreviewTransferRequest {
+  int64 from_wallet_id = 1;
+  string order_amount = 2;
+  optional string reference_id = 3;
+}
+
+// Запрос создания трансфера
+message CreateTransferRequest {
+  int64 from_wallet_id = 1;
+  string order_amount = 2;
+  optional string reference_id = 3;
+  optional bool preview_only = 4;
+}
+
+// Запрос получения трансфера
+message GetTransferRequest {
+  int64 transfer_id = 1;
+}
+
+// Запрос получения трансфера по reference
+message GetTransferByReferenceRequest {
+  string reference_id = 1;
+}
+
+// Запрос трансферов кошелька
+message GetWalletTransfersRequest {
+  int64 wallet_id = 1;
+  int32 limit = 2;
+  int32 offset = 3;
+}
+
+// Запрос обработки pending трансферов
+message ProcessPendingTransfersRequest {}
+
+// Ответ превью трансфера
+message TransferPreviewResponse {
+  string order_amount = 1;
+  string commission = 2;
+  string gas_cost_in_usdt = 3;
+  string percentage_commission = 4;
+  string total_amount = 5;
+  string master_wallet_receives = 6;
+  string breakdown = 7;
+  string trx_to_usdt_rate = 8;
+  int64 from_wallet_id = 9;
+  optional string reference_id = 10;
+}
+
+// Ответ с трансфером
+message TransferResponse {
+  int64 id = 1;
+  int64 from_wallet_id = 2;
+  string to_address = 3;
+  string amount = 4;
+  string status = 5;
+  optional string tx_hash = 6;
+  optional string reference_id = 7;
+  optional string error_message = 8;
+  string created_at = 9;
+  optional string completed_at = 10;
+}
+
+// Ответ с трансферами кошелька
+message WalletTransfersResponse {
+  int64 wallet_id = 1;
+  repeated TransferResponse transfers = 2;
+  int32 count = 3;
+}
+
+// Ответ обработки pending трансферов
+message ProcessPendingTransfersResponse {
+  string message = 1;
+  int32 processed_count = 2;
+}
