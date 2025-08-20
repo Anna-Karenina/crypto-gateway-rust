@@ -7,7 +7,7 @@ port = "${API_PORT:8080}"
 cors_enabled = "${CORS_ENABLED:true}"
 
 [grpc]
-enabled = "${GRPC_ENABLED:true}" 
+enabled = true
 host = "${GRPC_HOST:0.0.0.0}"
 port = "${GRPC_PORT:50051}"
 
@@ -18,13 +18,48 @@ max_connections = "${DB_MAX_CONNECTIONS:10}"
 [tron]
 api_key = "${TRONGRID_API_KEY}"
 base_url = "${TRONGRID_BASE_URL:https://api.shasta.trongrid.io}"
+# Основной токен (для обратной совместимости)
 usdt_contract = "${TRONGRID_USDT_CONTRACT:TG3XXyExBkPp9nzdajDZsozEu4BkaSJozs}"
-usdt_decimals = "${USDT_DECIMALS:6}"
+usdt_decimals = 6
 master_wallet_address = "${MASTER_WALLET_ADDRESS:TH3QBLNLsimQbNwq2DxTGhoDYeeCZYTvK3}"
 master_wallet_private_key = "${MASTER_WALLET_PRIVATE_KEY:df319c4fe709ad6a9f32b07ada986f4055708f4e064e5ff6cab439561a6eae59}"
 
-[wallet]
-use_real_generator = "${USE_REAL_TRON_GENERATOR:true}"
+# Мультитокенная конфигурация
+[trc20_service]
+balance_cache_ttl_seconds = "${TRC20_CACHE_TTL:30}"
+batch_size = "${TRC20_BATCH_SIZE:5}"
+enable_parallel_requests = "${TRC20_PARALLEL:true}"
+rate_limit_per_second = "${TRC20_RATE_LIMIT:10}"
+
+# Поддерживаемые токены (можно расширять)
+[[tokens]]
+symbol = "USDT"
+name = "Tether USD"
+contract_address = "${TOKEN_USDT_CONTRACT:TG3XXyExBkPp9nzdajDZsozEu4BkaSJozs}"
+decimals = 6
+is_stable = true
+min_transfer_amount = "1.0"
+max_transfer_amount = "1000000.0"
+enabled = true
+
+[[tokens]]
+symbol = "USDC"
+name = "USD Coin"
+contract_address = "${TOKEN_USDC_CONTRACT:TEkxiTehnzSmSe2XqrBj4w32RUN966rdz8}"
+decimals = 6
+is_stable = true
+min_transfer_amount = "1.0"
+max_transfer_amount = "1000000.0"
+enabled = "${TOKEN_USDC_ENABLED:false}"
+
+[[tokens]]
+symbol = "BTT"
+name = "BitTorrent"
+contract_address = "${TOKEN_BTT_CONTRACT:TAFjULxiVgT4qWk6UZwjqwZXTSaGaqnVp4}"
+decimals = 18
+is_stable = false
+min_transfer_amount = "1000.0"
+enabled = "${TOKEN_BTT_ENABLED:false}"
 
 [wallet.activation]
 enabled = "${WALLET_ACTIVATION_ENABLED:true}"

@@ -17,6 +17,7 @@ prost-types = "0.12"
 
 # Асинхронная среда выполнения
 tokio = { version = "1.35", features = ["full"] }
+futures-util = "0.3"
 
 # База данных
 diesel = { version = "2.1", features = ["postgres", "chrono", "uuid", "numeric"] }
@@ -52,6 +53,7 @@ bigdecimal = { version = "0.4", features = ["serde"] }
 secp256k1 = { version = "0.28", features = ["rand", "recovery"] }
 sha3 = "0.10"
 sha2 = "0.10"
+hmac = "0.12"
 hex = "0.4"
 base58 = "0.2"
 rand = "0.8"

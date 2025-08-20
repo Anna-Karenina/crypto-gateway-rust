@@ -6,7 +6,9 @@
 
 pub mod client;
 pub mod crypto;
+pub mod token_service;
 
 // Реэкспорт основных типов
 pub use client::TronGridClient;
 pub use crypto::{TronTransactionSigner, TronWalletGenerator};
+pub use token_service::{Trc20TokenService, Trc20ServiceConfig};

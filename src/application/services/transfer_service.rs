@@ -8,14 +8,14 @@ use diesel_async::RunQueryDsl;
 use rust_decimal::Decimal;
 
 use crate::application::dto::*;
-use crate::domain::{DomainError, TransactionStatus};
+use crate::domain::{DomainError, TransactionStatus, TronValidator};
 use crate::infrastructure::{
     database::{models::*, schema, DbPool},
     TronGridClient, TronTransactionSigner,
 };
 use crate::utils::{bigdecimal_to_decimal, decimal_to_bigdecimal};
 
-use super::{FeeCalculationService, SponsorGasService};
+use super::{SponsorGasService, UnifiedFeeService};
 
 /// Сервис для TRX трансферов (отправка TRX монет)
 #[derive(Clone)]
@@ -76,7 +76,7 @@ impl TrxTransferService {
 pub struct TransferService {
     pub db: DbPool,
     pub tron_client: TronGridClient,
-    pub fee_service: FeeCalculationService,
+    pub fee_service: UnifiedFeeService,
     pub master_wallet_address: String,
     pub sponsor_gas_service: SponsorGasService,
     pub transaction_signer: TronTransactionSigner,
@@ -87,7 +87,7 @@ impl TransferService {
     pub fn new(
         db: DbPool,
         tron_client: TronGridClient,
-        fee_service: FeeCalculationService,
+        fee_service: UnifiedFeeService,
         master_wallet_address: String,
         sponsor_gas_service: SponsorGasService,
     ) -> Self {
@@ -174,9 +174,9 @@ impl TransferService {
                 id: request.from_wallet_id,
             })?;
 
-        // 2. Рассчитываем комиссии
-        let (gas_cost_usdt, percentage_commission, final_commission, total_amount) = self
-            .fee_service
+        // 2. Рассчитываем комиссии (делаем mutable clone для вызова)
+        let mut fee_service = self.fee_service.clone();
+        let (gas_cost_usdt, percentage_commission, final_commission, total_amount) = fee_service
             .calculate_total_amount(request.order_amount, &wallet.address)
             .await?;
 
@@ -195,7 +195,7 @@ impl TransferService {
                 percentage_commission,
                 total_amount
             ),
-            trx_to_usdt_rate: self.fee_service.get_trx_to_usdt_rate(),
+            trx_to_usdt_rate: self.fee_service.get_config().trx_to_usdt_rate,
             from_wallet_id: request.from_wallet_id,
             reference_id: request.reference_id,
         })
@@ -237,7 +237,51 @@ impl TransferService {
     ) -> Result<TransferResponse> {
         tracing::info!("Создание нового трансфера: {:?}", request);
 
-        // Создаем новый трансфер в БД со статусом PENDING
+        // 1. Валидация входных данных
+        TronValidator::validate_amount(request.order_amount)
+            .map_err(|e| anyhow::anyhow!("Валидация суммы: {}", e))?;
+
+        if let Some(ref_id) = &request.reference_id {
+            TronValidator::validate_reference_id(ref_id)
+                .map_err(|e| anyhow::anyhow!("Валидация reference_id: {}", e))?;
+        }
+
+        // 2. Получаем кошелек отправителя
+        let mut conn = self.db.get().await?;
+        let wallet: WalletModel = schema::wallets::table
+            .find(request.from_wallet_id)
+            .first(&mut conn)
+            .await
+            .map_err(|_| anyhow::anyhow!("Кошелек с ID {} не найден", request.from_wallet_id))?;
+
+        // 3. Проверяем баланс кошелька
+        let wallet_balance = self.tron_client.get_usdt_balance(&wallet.address).await?;
+        
+        // 4. Рассчитываем общую сумму включая комиссии (делаем mutable clone)
+        let mut fee_service = self.fee_service.clone();
+        let (gas_cost_usdt, percentage_commission, final_commission, total_amount) = fee_service
+            .calculate_total_amount(request.order_amount, &wallet.address)
+            .await?;
+
+        tracing::info!(
+            "Расчет комиссий: газ={} USDT, процент={} USDT, итого={} USDT, общая сумма={} USDT",
+            gas_cost_usdt, percentage_commission, final_commission, total_amount
+        );
+
+        // 5. Проверяем достаточность баланса
+        if wallet_balance < total_amount {
+            return Err(anyhow::anyhow!(
+                "Недостаточно средств на кошельке {}. Требуется: {} USDT, доступно: {} USDT",
+                wallet.address, total_amount, wallet_balance
+            ));
+        }
+
+        tracing::info!(
+            "Проверка баланса прошла успешно: доступно {} USDT, требуется {} USDT",
+            wallet_balance, total_amount
+        );
+
+        // 6. Создаем новый трансфер в БД со статусом PENDING
         let new_transfer = NewOutgoingTransfer {
             from_wallet_id: request.from_wallet_id,
             to_address: self.master_wallet_address.clone(),
@@ -246,7 +290,6 @@ impl TransferService {
             reference_id: request.reference_id.clone(),
         };
 
-        let mut conn = self.db.get().await?;
         let transfer: OutgoingTransferModel =
             diesel::insert_into(schema::outgoing_transfers::table)
                 .values(&new_transfer)

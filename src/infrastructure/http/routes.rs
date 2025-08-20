@@ -45,6 +45,16 @@ pub fn configure_routes(cfg: &mut web::ServiceConfig) {
                 web::scope("/transactions").route("/{tx_hash}", web::get().to(get_transaction)),
             )
             .service(
+                // 🪙 Мультитокенные маршруты (новые!)
+                web::scope("/tokens")
+                    .route("", web::get().to(get_supported_tokens))
+                    .route("/balance", web::get().to(get_multi_token_balance))
+                    .route("/transfer", web::post().to(create_multi_token_transfer))
+                    .route("/{token_symbol}/toggle", web::post().to(toggle_token_status))
+                    .route("/cache/stats", web::get().to(get_cache_stats_and_cleanup))
+                    .route("/cache/invalidate/{wallet_address}", web::delete().to(invalidate_wallet_cache)),
+            )
+            .service(
                 // Отладочные маршруты
                 web::scope("/debug")
                     .route(

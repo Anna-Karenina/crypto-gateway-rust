@@ -3,18 +3,25 @@
 use std::sync::Arc;
 
 use crate::application::services::{
-    FeeCalculationService, SponsorGasService, TransferService, TrxTransferService,
-    WalletActivationService, WalletService,
+    FeeConfig, SponsorGasService, TransferService, TrxTransferService,
+    UnifiedFeeService, WalletActivationService, WalletService,
 };
 use crate::config::Settings;
-use crate::infrastructure::{database::create_db_pool, TronGridClient, TronWalletGenerator};
+use crate::domain::tokens::TokenRegistry;
+use crate::infrastructure::{
+    database::create_db_pool, 
+    TronGridClient, 
+    TronWalletGenerator,
+    tron::{Trc20TokenService, Trc20ServiceConfig},
+};
 
 /// Состояние приложения с всеми сервисами
 #[derive(Clone)]
 pub struct AppState {
     pub wallet_service: Arc<WalletService>,
     pub transfer_service: Arc<TransferService>,
-    pub fee_service: Arc<FeeCalculationService>,
+    pub fee_service: Arc<UnifiedFeeService>,
+    pub trc20_service: Arc<Trc20TokenService>, // 🪙 Новый мультитокенный сервис
 }
 
 impl AppState {
@@ -29,14 +36,20 @@ impl AppState {
         // 3. Создаем генератор кошельков
         let wallet_generator = TronWalletGenerator::new();
 
-        // 4. Создаем сервисы
-        let fee_service = FeeCalculationService::new(
+        // 4. Создаем единый сервис комиссий
+        let fee_config = FeeConfig {
+            base_trx_per_transaction: settings.fees.trx_per_transaction,
+            trx_to_usdt_rate: settings.fees.trx_to_usdt_rate,
+            commission_percentage: settings.fees.commission_percentage,
+            min_commission_usdt: settings.fees.min_commission_usdt,
+            max_commission_usdt: settings.fees.max_commission_usdt,
+            dynamic_fees_enabled: true, // Включаем динамические комиссии
+            ..Default::default()
+        };
+
+        let fee_service = UnifiedFeeService::new(
+            fee_config,
             tron_client.clone(),
-            settings.fees.trx_per_transaction,
-            settings.fees.trx_to_usdt_rate,
-            settings.fees.commission_percentage,
-            settings.fees.min_commission_usdt,
-            settings.fees.max_commission_usdt,
             settings.tron.master_wallet_address.clone(),
         );
 
@@ -74,17 +87,27 @@ impl AppState {
         );
 
         let transfer_service = TransferService::new(
-            db_pool,
-            tron_client,
+            db_pool.clone(),
+            tron_client.clone(),
             fee_service.clone(),
             settings.tron.master_wallet_address.clone(),
             sponsor_gas_service,
+        );
+
+        // 8. Создаем мультитокенный сервис
+        let token_registry = TokenRegistry::new(); // Инициализируем с базовыми токенами
+        let trc20_service_config = Trc20ServiceConfig::default();
+        let trc20_service = Trc20TokenService::new(
+            settings.tron.clone(),
+            trc20_service_config,
+            token_registry,
         );
 
         Ok(Self {
             wallet_service: Arc::new(wallet_service),
             transfer_service: Arc::new(transfer_service),
             fee_service: Arc::new(fee_service),
+            trc20_service: Arc::new(trc20_service),
         })
     }
 }
